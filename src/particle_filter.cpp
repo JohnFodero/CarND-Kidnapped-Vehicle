@@ -89,19 +89,7 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper
    *   during the updateWeights phase.
    */
-  double min_dist = 0;
-  double temp_dist = 0;
-  int min_idx = -1;
-  for(int j = 0; j < observations.size(); ++j) {
-    min_dist = 1000;
-    min_idx = -1;
-    for(int k = 0; k < predicted.size(); ++k) {
-      temp_dist = dist(observations[j].x, observations[j].y, predicted[k].x, predicted[k].y);
-      if(temp_dist < min_dist) {
-        min_dist = temp_dist;
-      }
-    }
-  }
+  //UNUSED
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -121,12 +109,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
    double total_weight = 0;
+   double weight;
    for(int i = 0; i < num_particles; ++i) {
-     // transform observations eg. predicted
      vector<LandmarkObs> predicted;
      for(int h = 0; h < observations.size(); ++h) {
        LandmarkObs temp;
-
        double x_particle = particles[i].x;
        double y_particle = particles[i].y;
        double x_car = observations[h].x;
@@ -135,61 +122,46 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
        temp.x = x_car*std::cos(theta) - y_car*std::sin(theta) + x_particle;
        temp.y = x_car*std::sin(theta) + y_car*std::cos(theta) + y_particle;
 
-       //find id
        temp.id = -1;
        double min_dist = 100000;
        double temp_dist;
        for(int j = 0; j < map_landmarks.landmark_list.size(); ++j) {
          temp_dist = dist(temp.x, temp.y, map_landmarks.landmark_list[j].x_f, map_landmarks.landmark_list[j].y_f);
-         //std::cout << "temp dist " << temp_dist << " "<< temp.x << " " << temp.y << " " << map_landmarks.landmark_list[j].x_f << " " << map_landmarks.landmark_list[j].y_f << std::endl;
          if(temp_dist < min_dist) {
            temp.id = j;
            min_dist = temp_dist;
          }
        }
-       //std::cout << "Closest obs: " << temp.id << " at distane " << min_dist << std::endl;
-       //observations[h].id = temp.id;
        predicted.push_back(temp);
      }
 
-     // associate
-     //ParticleFilter::dataAssociation(predicted, observations);
-     //std::cout << predicted.size() << " " << observations.size() << std::endl;
-     double weight = 0;
+     weight = 0;
      for(int j = 0; j < predicted.size(); ++j) {
 
        int id = predicted[j].id;
        if(id == -1) {
-         //std::cout << "Particle out of range!!!" << std::endl;
          continue;
        }
-       //std::cout << "found id " << id << std::endl;
        double std_x = std_landmark[0];
        double std_y = std_landmark[1];
-       double mu_x = map_landmarks.landmark_list[id].x_f; // coordinates of nearest landmark (eg map_landmarks)
+       double mu_x = map_landmarks.landmark_list[id].x_f;
        double mu_y = map_landmarks.landmark_list[id].y_f;
-       double x = predicted[j].x; // coordinates of observation
+       double x = predicted[j].x;
        double y = predicted[j].y;
        double diff_x = x - mu_x;
        double diff_y = y - mu_y;
-       //std::cout << mu_x << " " << mu_y << " " << x << " " << y << " " << std_x << " " << std_y << std::endl;
        weight += (1/(2*M_PI*std_x*std_y))*std::exp(-1*(((diff_x * diff_x)/(2*std_x*std_x)) + ((diff_y * diff_y)/(2*std_y*std_y))));
      }
-     //std::cout << i << ": Weight " << weight << std::endl;
      particles[i].weight = weight;
      weights[i] = weight;
      total_weight += weight;
 
    }
 
-   // normalize weights
-   //double sum = 0;
    for(int i = 0; i < num_particles; ++i) {
      particles[i].weight /= total_weight;
      weights[i] /= total_weight;
-     //sum += weights[i];
    }
-   //std::cout << "normalized sum " << sum << std::endl;
 }
 
 void ParticleFilter::resample() {
@@ -201,18 +173,10 @@ void ParticleFilter::resample() {
    */
   std::vector<Particle> new_particles;
   std::default_random_engine gen;
-  for(int i = 0; i < num_particles; ++i) {
-    //std::cout << weights[i] << " ";
-    break;
-  }
-  //std::cout << std::endl << std::endl;
   std::discrete_distribution<> d(weights.begin(), weights.end());
   for(int i = 0; i < num_particles; ++i) {
-    int idx = d(gen);
-    //std::cout << "picking index: " << idx << std::endl;
-    new_particles.push_back(particles[idx]);
+    new_particles.push_back(particles[d(gen)]);
   }
-  //std::cout << d(gen) << " " << d(gen) << std::endl;
   particles = new_particles;
 
 }
